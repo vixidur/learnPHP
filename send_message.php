@@ -28,18 +28,29 @@ function saveBase64Image($base64Image)
 
     return false;
 }
+// Hàm trả về JSON response
+function jsonResponse($status, $message, $data = null)
+{
+    header('Content-Type: application/json');
+    echo json_encode(['status' => $status, 'message' => $message, 'data' => $data]);
+    exit();
+}
 
 if (isset($_SESSION['username']) && $_SERVER["REQUEST_METHOD"] == "POST") {
     $conn = new mysqli("localhost", "root", "", "messaging_app");
     if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+        jsonResponse('error', 'Connection failed: ' . $conn->connect_error);
     }
 
     $message = trim($_POST['message']);
     $imagePath = '';
 
+    // xử lý hình ảnh
     if (!empty($_POST['imageData'])) {
         $imagePath = saveBase64Image($_POST['imageData']);
+        if (!$imagePath) {
+            jsonResponse('error', 'Invalid image data.');
+        }
     } elseif (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         $fileType = mime_content_type($_FILES['image']['tmp_name']);
@@ -48,30 +59,35 @@ if (isset($_SESSION['username']) && $_SERVER["REQUEST_METHOD"] == "POST") {
             move_uploaded_file($_FILES['image']['tmp_name'], $imagePath);
         }
     }
-
+    // thêm tin nhắn từ cơ sở dữ liệu
+    // Thêm tin nhắn vào cơ sở dữ liệu
     if (!empty($message) || !empty($imagePath)) {
         $stmt = $conn->prepare("INSERT INTO messages (sender_username, message, image_path) VALUES (?, ?, ?)");
         if ($stmt === false) {
-            die("Prepare failed: " . htmlspecialchars($conn->error));
+            jsonResponse('error', 'Prepare failed: ' . $conn->error);
         }
         $stmt->bind_param("sss", $_SESSION['username'], $message, $imagePath);
         $stmt->execute();
 
         if ($stmt->affected_rows > 0) {
-            $response = "<div class='message my-message'><strong>Me:</strong> " . htmlspecialchars($message);
-            if (!empty($imagePath)) {
-                $safeImagePath = htmlspecialchars($imagePath);
-                $response .= "<br><img src='{$safeImagePath}' alt='Image' style='max-width: 200px;'>";
-            }
-            $response .= "</div>";
-            echo $response;
+            $lastId = $conn->insert_id; // Lấy ID của tin nhắn vừa được thêm
+            $responseData = [
+                'messageId' => $lastId,
+                'message' => $message,
+                'imagePath' => $imagePath
+            ];
+            jsonResponse('success', 'Message sent.', $responseData);
         } else {
-            echo "Failed to send message.";
+            jsonResponse('error', 'Failed to send message.');
         }
 
         $stmt->close();
+    } else {
+        jsonResponse('error', 'No message or image provided.');
     }
 
     $conn->close();
+} else {
+    jsonResponse('error', 'User not logged in or invalid request.');
 }
 ?>

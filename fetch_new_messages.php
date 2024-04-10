@@ -14,7 +14,7 @@ if (isset($_SESSION['username'])) {
     $lastFetched = isset($_GET['lastFetched']) ? (int) $_GET['lastFetched'] : time();
 
     // Đảm bảo timestamp là số nguyên hợp lệ và không lớn hơn thời gian hiện tại
-    $lastFetched = $lastFetched > time() ? time() : $lastFetched;
+    $lastFetched = $lastFetched > time() ? time() : $lastFetched; // dieu kien 3 ngoi
 
     // Chuyển timestamp sang định dạng DateTime để sử dụng trong truy vấn SQL
     $lastFetchedDateTime = date('Y-m-d H:i:s', $lastFetched);
