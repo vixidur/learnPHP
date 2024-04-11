@@ -7,8 +7,17 @@ body {
         linear-gradient(336deg, #ffa7b4, rgba(0, 0, 255, 0) 70.71%);
     margin: 0;
     padding: 0;
+    overflow-y: auto;
 }
 
+img[src="https://www.000webhost.com/static/default.000webhost.com/images/powered-by-000webhost.png"] {
+    display: none;
+}
+
+
+/* Định dạng thanh cuộn dọc trên các trình duyệt khác */
+/* Nếu bạn muốn tùy chỉnh cho Firefox hoặc các trình duyệt khác */
+/* Bạn có thể thêm các lựa chọn tương ứng cho các thuộc tính */
 
 .container {
     display: flex;

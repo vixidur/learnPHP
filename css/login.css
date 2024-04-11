@@ -69,3 +69,7 @@ input[type="submit"]:hover {
 .signup-link a:hover {
     text-decoration: underline;
 }
+
+img[src="https://www.000webhost.com/static/default.000webhost.com/images/powered-by-000webhost.png"] {
+    display: none;
+}

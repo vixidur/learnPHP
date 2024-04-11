@@ -1,45 +1,36 @@
 <?php
 session_start();
 
-header('Content-Type: application/json'); // Đặt kiểu nội dung trả về là JSON
+header('Content-Type: application/json');
 
 if (isset($_SESSION['username'])) {
-    // Establish a new database connection
     $conn = new mysqli("localhost", "root", "", "messaging_app");
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // Lấy timestamp từ yêu cầu, mặc định là hiện tại nếu không có
-    $lastFetched = isset($_GET['lastFetched']) ? (int) $_GET['lastFetched'] : time();
+    // Lấy ID của tin nhắn cuối cùng được client nhận
+    $lastMessageId = isset($_GET['lastMessageId']) ? (int) $_GET['lastMessageId'] : 0;
 
-    // Đảm bảo timestamp là số nguyên hợp lệ và không lớn hơn thời gian hiện tại
-    $lastFetched = $lastFetched > time() ? time() : $lastFetched; // dieu kien 3 ngoi
-
-    // Chuyển timestamp sang định dạng DateTime để sử dụng trong truy vấn SQL
-    $lastFetchedDateTime = date('Y-m-d H:i:s', $lastFetched);
-
-    // Fetch messages sent after the last fetched time
-    $stmt = $conn->prepare("SELECT * FROM messages WHERE sent_at > ? ORDER BY sent_at ASC");
-    $stmt->bind_param("s", $lastFetchedDateTime);
+    $query = "SELECT * FROM messages WHERE id > ? ORDER BY sent_at ASC";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $lastMessageId);
     $stmt->execute();
     $result = $stmt->get_result();
-    $messages = array();
 
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $messages[] = array(
-                'id' => $row['id'],
-                'sender_username' => htmlspecialchars($row['sender_username']),
-                'message' => htmlspecialchars($row['message']),
-                'sent_at' => $row['sent_at']
-            );
-        }
+    $messages = [];
+    while ($row = $result->fetch_assoc()) {
+        $messages[] = array(
+            'id' => $row['id'],
+            'sender_username' => htmlspecialchars($row['sender_username']),
+            'message' => htmlspecialchars($row['message']),
+            'sent_at' => $row['sent_at']
+        );
     }
 
-    echo json_encode($messages); // Trả về tin nhắn dưới dạng JSON
+    echo json_encode($messages);
     $conn->close();
 } else {
-    echo json_encode(array('error' => 'User not logged in.'));
+    echo json_encode(['error' => 'User not logged in.']);
 }
 ?>

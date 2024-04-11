@@ -36,12 +36,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập</title>
     <link rel="stylesheet" href="./css/login.css">
+    <link rel="icon" href="./img/LOGO-DKN-VER2.png" type="image/png" sizes="16x16">
 </head>
+
 <body>
     <h2>Đăng nhập</h2>
     <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
@@ -51,7 +54,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input placeholder="Mật khẩu" type="password" id="password" name="password" required><br><br>
         <input type="submit" value="Đăng nhập">
     </form>
-    <?php if (!empty($login_error)) echo "<p>$login_error</p>"; ?>
+    <?php if (!empty($login_error))
+        echo "<p>$login_error</p>"; ?>
     <p>Chưa có tài khoản? <a href="signup.php">Đăng ký ngay</a></p>
 </body>
+
 </html>

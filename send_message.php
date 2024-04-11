@@ -1,29 +1,42 @@
 <?php
 session_start();
 
+function getFullImagePath($filePath)
+{
+    // Đảm bảo rằng $filePath là đường dẫn tương đối từ thư mục gốc của dự án đến file hình ảnh
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST']; // Có thể là localhost hoặc 127.0.0.1 hoặc tên máy chủ cục bộ của bạn
+    // Đường dẫn đầy đủ từ gốc của host đến file hình ảnh
+    return $scheme . '://' . $host . '/learnPHP/uploads/' . ltrim($filePath, '/');
+}
+
 function saveBase64Image($base64Image)
 {
-    // Xác định MIME type từ chuỗi base64
+    // Đảm bảo thư mục "uploads" tồn tại trong thư mục "learnPHP"
+    $uploadsDir = 'uploads/'; // Đường dẫn tương đối từ script hiện tại đến thư mục uploads
+    if (!is_dir($uploadsDir)) {
+        mkdir($uploadsDir, 0777, true); // Tạo thư mục nếu nó không tồn tại
+    }
+
     if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
         $data = substr($base64Image, strpos($base64Image, ',') + 1);
         $type = strtolower($type[1]); // jpg, png, gif
 
         if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
-            return false; // Không phải file hình ảnh
+            return false; // Loại file không hợp lệ
         }
 
         $data = base64_decode($data);
-
         if ($data === false) {
-            return false; // Base64 decode lỗi
+            return false; // Lỗi giải mã Base64
         }
     } else {
-        return false; // Không khớp với pattern
+        return false; // Dữ liệu không đúng định dạng
     }
 
-    $file = 'uploads/' . uniqid() . '.' . $type;
-    if (file_put_contents($file, $data)) {
-        return $file;
+    $file = uniqid() . '.' . $type; // Tên file duy nhất
+    if (file_put_contents($uploadsDir . $file, $data)) {
+        return $file; // Trả về tên file để tạo đường dẫn đầy đủ sau này
     }
 
     return false;
@@ -50,13 +63,22 @@ if (isset($_SESSION['username']) && $_SERVER["REQUEST_METHOD"] == "POST") {
         $imagePath = saveBase64Image($_POST['imageData']);
         if (!$imagePath) {
             jsonResponse('error', 'Invalid image data.');
+        } else {
+            $imagePath = getFullImagePath($imagePath);
         }
     } elseif (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         $fileType = mime_content_type($_FILES['image']['tmp_name']);
         if (in_array($fileType, $allowedTypes)) {
-            $imagePath = 'uploads/' . basename($_FILES['image']['name']);
-            move_uploaded_file($_FILES['image']['tmp_name'], $imagePath);
+            $imageFileName = uniqid() . '_' . basename($_FILES['image']['name']);
+            $imagePath = "uploads/" . basename($_FILES['image']['name']);
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
+                $imagePath = getFullImagePath($imagePath);
+            } else {
+                jsonResponse('error', 'Error uploading the image file.');
+            }
+        } else {
+            jsonResponse('error', 'The file type is not allowed.');
         }
     }
     // thêm tin nhắn từ cơ sở dữ liệu
