@@ -375,11 +375,11 @@ $conn->close();
                 <span class="tooltip">Chat Box</span>
             </li>
             <li>
-                <a href="#">
+                <a href="./learnresponsive">
                     <i class='bx bx-spa'></i>
-                    <span class="links_name">Giới thiệu</span>
+                    <span class="links_name">Du lịch</span>
                 </a>
-                <span class="tooltip">Giới thiệu</span>
+                <span class="tooltip">Du lịch</span>
             </li>
             <li>
                 <a href="#">
