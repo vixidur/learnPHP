@@ -296,7 +296,6 @@
 
     .avatars {
         box-sizing: border-box;
-        ;
         display: flex;
         justify-content: center;
     }
