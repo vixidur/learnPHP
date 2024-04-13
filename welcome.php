@@ -1,36 +1,15 @@
 <?php
 session_start();
+require_once 'dbconnect.php'; // Giả sử 'dbconnect.php' trả về đối tượng PDO
 
-// Redirect the user to the login page if not logged in.
+// Kiểm tra xem người dùng đã đăng nhập chưa
 if (!isset($_SESSION['username'])) {
-    header('Location: login.php');
+    header("Location: login.php"); // Chuyển hướng về trang đăng nhập nếu chưa đăng nhập
     exit();
 }
 
-// Connect to the database
-$conn = new mysqli("localhost", "root", "", "messaging_app");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Hàm lấy tin nhắn từ cơ sở dữ liệu
-function fetchMessages($conn)
-{
-    $sql = "SELECT * FROM messages ORDER BY sent_at ASC"; // Sắp xếp theo thời gian gửi tin nhắn từ cũ đến mới
-    $result = $conn->query($sql);
-
-    $messages = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $messages[] = $row;
-        }
-    }
-    return $messages;
-}
-
-$messages = fetchMessages($conn);
-$conn->close();
-
+$conn = connectDB();
+$conn = null;
 ?>
 
 <!DOCTYPE html>
@@ -47,293 +26,293 @@ $conn->close();
     <link rel="icon" href="../img/LOGO-DKN-VER2.png" type="image/png" sizes="16x16">
     <link rel="stylesheet" href="./css/index.css">
     <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "Poppins", sans-serif;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
 
-    img[src="https://www.000webhost.com/static/default.000webhost.com/images/powered-by-000webhost.png"] {
-        display: none;
-    }
-
-    .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100%;
-        width: 78px;
-        background: #11101d;
-        padding: 6px 14px;
-        z-index: 99;
-        transition: all 0.5s ease;
-    }
-
-    .sidebar.open {
-        width: 250px;
-    }
-
-    .sidebar .logo-details {
-        height: 60px;
-        display: flex;
-        align-items: center;
-        position: relative;
-    }
-
-    .sidebar .logo-details .icon {
-        opacity: 0;
-        transition: all 0.5s ease;
-    }
-
-    .sidebar .logo-details .logo_name {
-        color: #fff;
-        font-size: 20px;
-        font-weight: 600;
-        opacity: 0;
-        transition: all 0.5s ease;
-    }
-
-    .sidebar.open .logo-details .icon,
-    .sidebar.open .logo-details .logo_name {
-        opacity: 1;
-    }
-
-    .sidebar .logo-details #btn {
-        background-color: #11101d;
-        position: absolute;
-        top: 50%;
-        right: 0;
-        transform: translateY(-50%);
-        font-size: 22px;
-        transition: all 0.4s ease;
-        font-size: 23px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.5s ease;
-    }
-
-    .sidebar.open .logo-details #btn {
-        text-align: right;
-    }
-
-    .sidebar i {
-        color: #fff;
-        height: 60px;
-        min-width: 50px;
-        font-size: 28px;
-        text-align: center;
-        line-height: 60px;
-    }
-
-    .sidebar .nav-list {
-        margin-top: 20px;
-        height: 100%;
-    }
-
-    .sidebar li {
-        position: relative;
-        margin: 8px 0;
-        list-style: none;
-    }
-
-    .sidebar li .tooltip {
-        position: absolute;
-        top: -20px;
-        left: calc(100% + 15px);
-        z-index: 3;
-        background: #fff;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 15px;
-        font-weight: 400;
-        opacity: 0;
-        white-space: nowrap;
-        pointer-events: none;
-        transition: 0s;
-    }
-
-    .sidebar li:hover .tooltip {
-        opacity: 1;
-        pointer-events: auto;
-        transition: all 0.4s ease;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-
-    .sidebar.open li .tooltip {
-        display: none;
-    }
-
-    .sidebar input {
-        font-size: 15px;
-        color: #fff;
-        font-weight: 400;
-        outline: none;
-        height: 50px;
-        width: 100%;
-        width: 50px;
-        border: none;
-        border-radius: 12px;
-        transition: all 0.5s ease;
-        background: #1d1b31;
-    }
-
-    .sidebar.open input {
-        padding: 0 20px 0 50px;
-        width: 100%;
-    }
-
-    .sidebar .bx-search {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        transform: translateY(-50%);
-        font-size: 22px;
-        background: #1d1b31;
-        color: #fff;
-    }
-
-    .sidebar.open .bx-search:hover {
-        background: #1d1b31;
-        color: #fff;
-    }
-
-    .sidebar .bx-search:hover {
-        background: #fff;
-        color: #11101d;
-    }
-
-    .sidebar li a {
-        display: flex;
-        height: 100%;
-        width: 100%;
-        border-radius: 12px;
-        align-items: center;
-        text-decoration: none;
-        transition: all 0.4s ease;
-        background: #11101d;
-    }
-
-    .sidebar li a:hover {
-        background: #fff;
-    }
-
-    .sidebar li a .links_name {
-        color: #fff;
-        font-size: 15px;
-        font-weight: 400;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: 0.4s;
-    }
-
-    .sidebar.open li a .links_name {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .sidebar li a:hover .links_name,
-    .sidebar li a:hover i {
-        transition: all 0.5s ease;
-        color: #11101d;
-    }
-
-    .sidebar li i {
-        height: 50px;
-        line-height: 50px;
-        font-size: 18px;
-        border-radius: 12px;
-    }
-
-    .sidebar li.profile {
-        position: fixed;
-        height: 60px;
-        width: 78px;
-        left: 0;
-        bottom: -8px;
-        padding: 10px 14px;
-        background: #1d1b31;
-        transition: all 0.5s ease;
-        overflow: hidden;
-    }
-
-    .sidebar.open li.profile {
-        width: 250px;
-    }
-
-    .sidebar li .profile-details {
-        display: flex;
-        align-items: center;
-        flex-wrap: nowrap;
-    }
-
-    .sidebar li.profile .name,
-    .sidebar li.profile .job {
-        font-size: 15px;
-        font-weight: 400;
-        color: #fff;
-        white-space: nowrap;
-    }
-
-    .sidebar li.profile .job {
-        font-size: 12px;
-    }
-
-    .sidebar .profile #log_out {
-        position: absolute;
-        top: 50%;
-        right: 0;
-        transform: translateY(-50%);
-        background: #1d1b31;
-        width: 100%;
-        height: 60px;
-        line-height: 60px;
-        border-radius: 0px;
-        transition: all 0.5s ease;
-    }
-
-    .sidebar.open .profile #log_out {
-        width: 50px;
-        background: none;
-    }
-
-    .home-section {
-        position: relative;
-        background: #e4e9f7;
-        min-height: 100vh;
-        top: 0;
-        left: 78px;
-        width: calc(100% - 78px);
-        transition: all 0.5s ease;
-        z-index: 2;
-    }
-
-    .home-section .text {
-        display: inline-block;
-        color: #11101d;
-        font-size: 25px;
-        font-weight: 500;
-        margin: 18px;
-    }
-
-    @media (max-width: 420px) {
-        .sidebar li .tooltip {
+        img[src="https://www.000webhost.com/static/default.000webhost.com/images/powered-by-000webhost.png"] {
             display: none;
         }
-    }
 
-    .logout-link {
-        color: white;
-        background-color: #11101d;
-    }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 78px;
+            background: #11101d;
+            padding: 6px 14px;
+            z-index: 99;
+            transition: all 0.5s ease;
+        }
 
-    .logout-link:hover {
-        background-color: #11101d;
-        cursor: pointer;
-    }
+        .sidebar.open {
+            width: 250px;
+        }
+
+        .sidebar .logo-details {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .sidebar .logo-details .icon {
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+
+        .sidebar .logo-details .logo_name {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+
+        .sidebar.open .logo-details .icon,
+        .sidebar.open .logo-details .logo_name {
+            opacity: 1;
+        }
+
+        .sidebar .logo-details #btn {
+            background-color: #11101d;
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            font-size: 22px;
+            transition: all 0.4s ease;
+            font-size: 23px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.5s ease;
+        }
+
+        .sidebar.open .logo-details #btn {
+            text-align: right;
+        }
+
+        .sidebar i {
+            color: #fff;
+            height: 60px;
+            min-width: 50px;
+            font-size: 28px;
+            text-align: center;
+            line-height: 60px;
+        }
+
+        .sidebar .nav-list {
+            margin-top: 20px;
+            height: 100%;
+        }
+
+        .sidebar li {
+            position: relative;
+            margin: 8px 0;
+            list-style: none;
+        }
+
+        .sidebar li .tooltip {
+            position: absolute;
+            top: -20px;
+            left: calc(100% + 15px);
+            z-index: 3;
+            background: #fff;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: 400;
+            opacity: 0;
+            white-space: nowrap;
+            pointer-events: none;
+            transition: 0s;
+        }
+
+        .sidebar li:hover .tooltip {
+            opacity: 1;
+            pointer-events: auto;
+            transition: all 0.4s ease;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .sidebar.open li .tooltip {
+            display: none;
+        }
+
+        .sidebar input {
+            font-size: 15px;
+            color: #fff;
+            font-weight: 400;
+            outline: none;
+            height: 50px;
+            width: 100%;
+            width: 50px;
+            border: none;
+            border-radius: 12px;
+            transition: all 0.5s ease;
+            background: #1d1b31;
+        }
+
+        .sidebar.open input {
+            padding: 0 20px 0 50px;
+            width: 100%;
+        }
+
+        .sidebar .bx-search {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            font-size: 22px;
+            background: #1d1b31;
+            color: #fff;
+        }
+
+        .sidebar.open .bx-search:hover {
+            background: #1d1b31;
+            color: #fff;
+        }
+
+        .sidebar .bx-search:hover {
+            background: #fff;
+            color: #11101d;
+        }
+
+        .sidebar li a {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            border-radius: 12px;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.4s ease;
+            background: #11101d;
+        }
+
+        .sidebar li a:hover {
+            background: #fff;
+        }
+
+        .sidebar li a .links_name {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 400;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.4s;
+        }
+
+        .sidebar.open li a .links_name {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sidebar li a:hover .links_name,
+        .sidebar li a:hover i {
+            transition: all 0.5s ease;
+            color: #11101d;
+        }
+
+        .sidebar li i {
+            height: 50px;
+            line-height: 50px;
+            font-size: 18px;
+            border-radius: 12px;
+        }
+
+        .sidebar li.profile {
+            position: fixed;
+            height: 60px;
+            width: 78px;
+            left: 0;
+            bottom: -8px;
+            padding: 10px 14px;
+            background: #1d1b31;
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+
+        .sidebar.open li.profile {
+            width: 250px;
+        }
+
+        .sidebar li .profile-details {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .sidebar li.profile .name,
+        .sidebar li.profile .job {
+            font-size: 15px;
+            font-weight: 400;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .sidebar li.profile .job {
+            font-size: 12px;
+        }
+
+        .sidebar .profile #log_out {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: #1d1b31;
+            width: 100%;
+            height: 60px;
+            line-height: 60px;
+            border-radius: 0px;
+            transition: all 0.5s ease;
+        }
+
+        .sidebar.open .profile #log_out {
+            width: 50px;
+            background: none;
+        }
+
+        .home-section {
+            position: relative;
+            background: #e4e9f7;
+            min-height: 100vh;
+            top: 0;
+            left: 78px;
+            width: calc(100% - 78px);
+            transition: all 0.5s ease;
+            z-index: 2;
+        }
+
+        .home-section .text {
+            display: inline-block;
+            color: #11101d;
+            font-size: 25px;
+            font-weight: 500;
+            margin: 18px;
+        }
+
+        @media (max-width: 420px) {
+            .sidebar li .tooltip {
+                display: none;
+            }
+        }
+
+        .logout-link {
+            color: white;
+            background-color: #11101d;
+        }
+
+        .logout-link:hover {
+            background-color: #11101d;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -593,150 +572,150 @@ $conn->close();
             </div>
         </footer>
         <style>
-        a {
-            color: black;
-            list-style: none;
-            text-decoration: none;
-        }
+            a {
+                color: black;
+                list-style: none;
+                text-decoration: none;
+            }
 
-        a:hover {
-            color: red;
-        }
+            a:hover {
+                color: red;
+            }
 
-        /* Định dạng thanh cuộn dọc */
-        ::-webkit-scrollbar {
-            width: 1px;
-            /* Chiều rộng của thanh cuộn */
-        }
+            /* Định dạng thanh cuộn dọc */
+            ::-webkit-scrollbar {
+                width: 1px;
+                /* Chiều rộng của thanh cuộn */
+            }
 
-        /* Định dạng nút cuộn */
-        ::-webkit-scrollbar-thumb {
-            background-color: #0baae7;
-            /* Màu của nút cuộn */
-            border-radius: 5px;
-            /* Bo góc của nút cuộn */
-        }
+            /* Định dạng nút cuộn */
+            ::-webkit-scrollbar-thumb {
+                background-color: #0baae7;
+                /* Màu của nút cuộn */
+                border-radius: 5px;
+                /* Bo góc của nút cuộn */
+            }
 
-        /* Định dạng khi di chuột vào nút cuộn */
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: #0688BC;
-            /* Màu của nút cuộn khi di chuột vào */
-        }
+            /* Định dạng khi di chuột vào nút cuộn */
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: #0688BC;
+                /* Màu của nút cuộn khi di chuột vào */
+            }
 
-        /* Định dạng phần footer */
-        .footer {
-            background-color: #30598c;
-            /* Đường dẫn đến hình ảnh background */
-            background-size: cover;
-            background-position: center;
-            color: #fff;
-            padding: 50px 0;
-        }
-
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            /* max-width: 1200px; */
-            margin: 0 auto;
-        }
-
-        .logo img {
-            width: 100px;
-            /* Định kích thước của logo */
-        }
-
-        .copyright p {
-            margin-top: 40px;
-            font-size: 20px;
-        }
-
-        .info p {
-            margin: 5px 0;
-        }
-
-        .info a {
-            color: #fff;
-        }
-
-        /* Định dạng cho phần nội dung chính giữa footer */
-        .info,
-        .logo,
-        .copyright,
-        .ownerwebsite,
-        .about {
-            /* flex: 1; */
-            text-align: center;
-        }
-
-        /* Định dạng cho phần thông tin bản quyền ở giữa */
-        .copyright p {
-            font-size: 14px;
-        }
-
-        .avatars {
-            box-sizing: border-box;
-            ;
-            display: flex;
-            justify-content: center;
-        }
-
-        .avatar-container {
-            margin: 0 10px;
-            /* Khoảng cách giữa các avatar */
-        }
-
-        .bx-log-out {
-            cursor: pointer;
-            /* Thiết lập con trỏ chuột thành hình bàn tay khi trỏ vào */
-        }
-
-        @media (max-width: 768px) {
-            .avatar-container {
-                box-sizing: border-box;
-                width: 10px;
-                height: 80px;
+            /* Định dạng phần footer */
+            .footer {
+                background-color: #30598c;
+                /* Đường dẫn đến hình ảnh background */
+                background-size: cover;
+                background-position: center;
+                color: #fff;
+                padding: 50px 0;
             }
 
             .footer-content {
                 display: flex;
-                flex-direction: column;
-                /* height: 80px; */
+                justify-content: space-between;
+                align-items: center;
+                /* max-width: 1200px; */
+                margin: 0 auto;
             }
-        }
+
+            .logo img {
+                width: 100px;
+                /* Định kích thước của logo */
+            }
+
+            .copyright p {
+                margin-top: 40px;
+                font-size: 20px;
+            }
+
+            .info p {
+                margin: 5px 0;
+            }
+
+            .info a {
+                color: #fff;
+            }
+
+            /* Định dạng cho phần nội dung chính giữa footer */
+            .info,
+            .logo,
+            .copyright,
+            .ownerwebsite,
+            .about {
+                /* flex: 1; */
+                text-align: center;
+            }
+
+            /* Định dạng cho phần thông tin bản quyền ở giữa */
+            .copyright p {
+                font-size: 14px;
+            }
+
+            .avatars {
+                box-sizing: border-box;
+                ;
+                display: flex;
+                justify-content: center;
+            }
+
+            .avatar-container {
+                margin: 0 10px;
+                /* Khoảng cách giữa các avatar */
+            }
+
+            .bx-log-out {
+                cursor: pointer;
+                /* Thiết lập con trỏ chuột thành hình bàn tay khi trỏ vào */
+            }
+
+            @media (max-width: 768px) {
+                .avatar-container {
+                    box-sizing: border-box;
+                    width: 10px;
+                    height: 80px;
+                }
+
+                .footer-content {
+                    display: flex;
+                    flex-direction: column;
+                    /* height: 80px; */
+                }
+            }
         </style>
     </section>
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var logoutButton = document.querySelector(".bx-log-out");
-        if (logoutButton) {
-            logoutButton.addEventListener("click", function() {
-                window.location.href = "./logout.php";
-            });
+        document.addEventListener("DOMContentLoaded", function () {
+            var logoutButton = document.querySelector(".bx-log-out");
+            if (logoutButton) {
+                logoutButton.addEventListener("click", function () {
+                    window.location.href = "./logout.php";
+                });
+            }
+        });
+
+        let sidebar = document.querySelector(".sidebar");
+        let closeBtn = document.querySelector("#btn");
+        let searchBtn = document.querySelector(".bx-search");
+
+        closeBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            menuBtnChange();
+        });
+
+        searchBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            menuBtnChange();
+        });
+
+        function menuBtnChange() {
+            if (sidebar.classList.contains("open")) {
+                closeBtn.classList.replace("bx-menu", "bx-menu-alt-right");
+            } else {
+                closeBtn.classList.replace("bx-menu-alt-right", "bx-menu");
+            }
         }
-    });
-
-    let sidebar = document.querySelector(".sidebar");
-    let closeBtn = document.querySelector("#btn");
-    let searchBtn = document.querySelector(".bx-search");
-
-    closeBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-        menuBtnChange();
-    });
-
-    searchBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-        menuBtnChange();
-    });
-
-    function menuBtnChange() {
-        if (sidebar.classList.contains("open")) {
-            closeBtn.classList.replace("bx-menu", "bx-menu-alt-right");
-        } else {
-            closeBtn.classList.replace("bx-menu-alt-right", "bx-menu");
-        }
-    }
     </script>
 </body>
 

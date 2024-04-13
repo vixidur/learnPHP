@@ -9,10 +9,9 @@ if (isset($_SESSION['username'])) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // Lấy ID của tin nhắn cuối cùng được client nhận
     $lastMessageId = isset($_GET['lastMessageId']) ? (int) $_GET['lastMessageId'] : 0;
 
-    $query = "SELECT * FROM messages WHERE id > ? ORDER BY sent_at ASC";
+    $query = "SELECT m.*, COALESCE(u.username, 'Unknown') AS sender_username FROM messages m LEFT JOIN users u ON m.sender_username = u.username WHERE m.id > ? ORDER BY m.sent_at ASC";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $lastMessageId);
     $stmt->execute();
@@ -20,16 +19,25 @@ if (isset($_SESSION['username'])) {
 
     $messages = [];
     while ($row = $result->fetch_assoc()) {
-        $messages[] = array(
+        if ($row['sender_username'] === $_SESSION['username']) {
+            // Nếu người gửi là người dùng hiện tại
+            $class = 'my-message';
+        } else {
+            // Nếu không phải, hiển thị tên người gửi hoặc 'Unknown' nếu không có
+            $class = 'friend-message';
+            $row['sender_username'] = $row['sender_username'] ?? 'Unknown';
+        }
+        $messages[] = [
             'id' => $row['id'],
             'sender_username' => htmlspecialchars($row['sender_username']),
             'message' => htmlspecialchars($row['message']),
             'sent_at' => $row['sent_at']
-        );
+        ];
     }
 
     echo json_encode($messages);
     $conn->close();
+
 } else {
     echo json_encode(['error' => 'User not logged in.']);
 }

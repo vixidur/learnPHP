@@ -1,39 +1,40 @@
 <?php
-// login.php
 session_start();
-$login_error = '';
+require_once 'dbconnect.php'; // Đường dẫn đến file dbconnect.php của bạn
+
+// Lấy thông tin đăng nhập từ form
+$username = $_POST['username'] ?? '';
+$password = $_POST['password'] ?? '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $conn = mysqli_connect("localhost", "root", "", "messaging_app");
+    $conn = connectDB();  // Gọi hàm kết nối cơ sở dữ liệu
 
-    if (!$conn) {
-        die("Connection failed: " . mysqli_connect_error());
-    }
+    // Chuẩn bị và thực thi truy vấn SQL sử dụng PDO
+    $stmt = $conn->prepare("SELECT password FROM users WHERE username = :username");
+    $stmt->bindParam(':username', $username);
+    $stmt->execute();
 
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = $_POST['password'];
-
-    $sql = "SELECT * FROM users WHERE username = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "s", $username);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    if ($row = mysqli_fetch_assoc($result)) {
-        if (password_verify($password, $row['password'])) {
+    // Kiểm tra kết quả truy vấn
+    if ($stmt->rowCount() > 0) {
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Kiểm tra mật khẩu
+        if (password_verify($password, $user['password'])) {
+            // Đăng nhập thành công, thiết lập session
             $_SESSION['username'] = $username;
-            header('Location: welcome.php');
+            header("Location: welcome.php"); // Chuyển hướng người dùng đến welcome.php
             exit();
         } else {
-            $login_error = "Mật khẩu không đúng.";
+            echo "Mật khẩu không chính xác";
         }
     } else {
-        $login_error = "Tên người dùng không tồn tại.";
+        echo "Tên đăng nhập không tồn tại";
     }
 
-    mysqli_close($conn);
+    $conn = null; // Đóng kết nối cơ sở dữ liệu
 }
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 

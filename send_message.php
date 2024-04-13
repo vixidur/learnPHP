@@ -3,12 +3,12 @@ session_start();
 
 function getFullImagePath($filePath)
 {
-    // Đảm bảo rằng $filePath là đường dẫn tương đối từ thư mục gốc của dự án đến file hình ảnh
     $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST']; // Có thể là localhost hoặc 127.0.0.1 hoặc tên máy chủ cục bộ của bạn
-    // Đường dẫn đầy đủ từ gốc của host đến file hình ảnh
-    return $scheme . '://' . $host . '/learnPHP/uploads/' . ltrim($filePath, '/');
+    $host = $_SERVER['HTTP_HOST'];
+    $filePath = ltrim($filePath, '/');  // Đảm bảo không có dấu '/' đầu tiên
+    return $scheme . '://' . $host . '/learnPHP/uploads/' . $filePath;
 }
+
 
 function saveBase64Image($base64Image)
 {
@@ -66,19 +66,22 @@ if (isset($_SESSION['username']) && $_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $imagePath = getFullImagePath($imagePath);
         }
-    } elseif (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        $fileType = mime_content_type($_FILES['image']['tmp_name']);
-        if (in_array($fileType, $allowedTypes)) {
-            $imageFileName = uniqid() . '_' . basename($_FILES['image']['name']);
-            $imagePath = "uploads/" . basename($_FILES['image']['name']);
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
-                $imagePath = getFullImagePath($imagePath);
+    } else {
+        // Nếu đang sử dụng hình ảnh được tải lên thông qua form
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            $fileType = mime_content_type($_FILES['image']['tmp_name']);
+            if (in_array($fileType, $allowedTypes)) {
+                $imageFileName = uniqid() . '_' . basename($_FILES['image']['name']);
+                $imagePath = "uploads/" . $imageFileName;  // Sửa lại đây
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
+                    $imagePath = getFullImagePath($imageFileName);  // Sử dụng chỉ tên file để tránh lặp thư mục
+                } else {
+                    jsonResponse('error', 'Error uploading the image file.');
+                }
             } else {
-                jsonResponse('error', 'Error uploading the image file.');
+                jsonResponse('error', 'The file type is not allowed.');
             }
-        } else {
-            jsonResponse('error', 'The file type is not allowed.');
         }
     }
     // thêm tin nhắn từ cơ sở dữ liệu
@@ -112,4 +115,6 @@ if (isset($_SESSION['username']) && $_SERVER["REQUEST_METHOD"] == "POST") {
 } else {
     jsonResponse('error', 'User not logged in or invalid request.');
 }
+
+
 ?>
